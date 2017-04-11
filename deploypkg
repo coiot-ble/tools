@@ -1,0 +1,80 @@
+#!/usr/bin/sh
+
+set -e
+
+fail() {
+	echo -e "\x1b[91mFAIL\x1b[0m" $@
+	exit 2
+}
+
+success() {
+	echo -e "\x1b[32mOK\x1b[0m" $@
+}
+
+check_is_set() {
+	if [ "${!2}" == "" ]; then
+		fail "variable \x1b[1m$2\x1b[0m must be set"
+	fi
+
+	echo "$1: ${!2}"
+}
+
+pkg=$(readlink -f ${1:-.})
+if [ ! -f "$pkg/PKGDEPLOY" ]; then
+	echo "no package to deploy at $pkg"
+	exit 2
+fi
+
+pkg_tmp_dir=/tmp/deploypkg
+pkg_files=$(git -C $pkg ls-files 2>/dev/null || true)
+pkg_target_dest=/opt/$(basename $pkg)
+
+if [ ! -z ${PKGDEPLOY_CONFIG+x} ]; then
+	echo "running custom config $DEPLOY_CONFIG"
+	source $PKGDEPLOY_CONFIG
+fi
+source $pkg/PKGDEPLOY
+
+echo "checking local temporary directory..."
+check_is_set "local temporary directory" pkg_tmp_dir
+if [ ! -d $pkg_tmp_dir ]; then
+	fail "\x1b[1m$pkg_tmp_dir\x1b[0m does not exist"
+fi
+touch $pkg_tmp_dir/tmp && rm $pkg_tmp_dir/tmp || fail "cannot create file on local temporary dir"
+success "local temporary directory exists"
+
+echo "checking target..."
+check_is_set "full target ssh address (eg root@192.168.0.1)" target
+ssh $target true || fail "ssh target $target unreachable"
+success "target is reachable"
+
+echo "checking files to package..."
+check_is_set "files to package" pkg_files
+for f in $pkg_files; do
+	if [ ! -f $pkg/$f ]; then
+		fail "file $pkg/$f does not exist"
+	fi
+done
+success "files to package all exist"
+
+echo "checkinkg destination path on target..."
+check_is_set "destination path on target" pkg_target_dest
+if [ $pkg_target_dest == "." ] || [ $pkg_target_dest == "/" ] || [ $pkg_target_dest == "~" ]; then
+	fail "the destination path $pkg_target_dest is too dangerous"
+fi
+ssh $target "test -d $pkg_target_dest" || fail "path $pkg_target_dest does not exist on target"
+success "destination path on target exists"
+
+echo -n "Deploy package ? (y/N) " && read yn
+if [ "$yn" != "y" ]; then exit 0; fi
+
+pkg_tmp=$pkg_tmp_dir/pack.tar.xz
+pkg_target_tmp=/tmp/pack.tar.xz
+
+echo "packing..."
+tar -cJf $pkg_tmp $pkg_files
+echo "uploading package..."
+scp $pkg_tmp $target:$pkg_target_tmp
+echo "unpacking..."
+ssh $target "rm -rf $pkg_target_dest/*; tar -C $pkg_target_dest -xJf $pkg_target_tmp"
+success "package deployed"
