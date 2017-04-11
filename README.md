@@ -16,8 +16,10 @@ should be changed via the configuration files.
 The following variables must be made available to the tool through the configuration files:
 - **target**: SSH name of the target, for example root@192.168.0.1
 - **pkg_target_dest**:  destination directory for the 
-- **pkg_files**: files to package (default: get all files tracked in git)
+- **pkg_files**: files to package (default gets all files tracked in git)
 - **pkg_tmp_dir**: local temporary directory to save the package to (default `/tmp/deploypkg`) 
+- **pkg_post_unpack**: function to execute on local machine following a successful unpacking (default nothing)
+- **pkg_target_post_unpack**: function to execute on target following a successful unpacking (default nothing)
 
 These can be set and modified using config files. A config file is a sh script run after setting default values,
 so you can run custom code in it if you wish. They are run in the following order:

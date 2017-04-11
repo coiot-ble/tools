@@ -77,4 +77,15 @@ echo "uploading package..."
 scp $pkg_tmp $target:$pkg_target_tmp
 echo "unpacking..."
 ssh $target "rm -rf $pkg_target_dest/*; tar -C $pkg_target_dest -xJf $pkg_target_tmp"
+
+if declare -f pkg_post_unpack > /dev/null; then
+	echo "executing post-unpack script..."
+	pkg_post_unpack || fail "post unpack script"
+fi
+
+if declare -f pkg_target_post_unpack > /dev/null; then
+	echo "executing post-unpack script on target..."
+	ssh $target "pkg_target_dest=$pkg_target_dest; $(declare -f pkg_target_post_unpack); pkg_target_post_unpack" || fail "post unpack target script"
+fi
+
 success "package deployed"
