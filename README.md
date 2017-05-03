@@ -18,6 +18,7 @@ The following variables must be made available to the tool through the configura
 - **pkg_target_dest**:  destination directory for the 
 - **pkg_files**: files to package (default gets all files tracked in git)
 - **pkg_tmp_dir**: local temporary directory to save the package to (default `/tmp/deploypkg`) 
+- **pkg_test**: function to execute as first check on local machine to verify package works correctly
 - **pkg_post_unpack**: function to execute on local machine following a successful unpacking (default nothing)
 - **pkg_target_post_unpack**: function to execute on target following a successful unpacking (default nothing)
 

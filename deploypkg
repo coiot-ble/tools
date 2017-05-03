@@ -35,6 +35,11 @@ if [ ! -z ${PKGDEPLOY_CONFIG+x} ]; then
 fi
 source $pkg/PKGDEPLOY
 
+if declare -f pkg_test > /dev/null; then
+	echo "executing package test"
+	pkg_test || fail "package test"
+fi
+
 echo "checking local temporary directory..."
 check_is_set "local temporary directory" pkg_tmp_dir
 if [ ! -d $pkg_tmp_dir ]; then
